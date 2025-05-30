@@ -3,44 +3,66 @@ from bs4 import BeautifulSoup
 def extract_and_save_confluence_content(html_content, output_file):
     soup = BeautifulSoup(html_content, "html.parser")
     with open(output_file, "w", encoding="utf-8") as f:
+        last_type = None
         for element in soup.body.descendants if soup.body else soup.descendants:
             if not hasattr(element, "name"):
                 continue
 
             # Headings
             if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-                f.write(f"\n{element.name.upper()}: {element.get_text(strip=True)}\n")
+                if last_type is not None:
+                    f.write("\n")
+                f.write(element.get_text(strip=True) + "\n\n")
+                last_type = "heading"
 
             # Paragraphs
             elif element.name == "p":
                 text = element.get_text(strip=True)
                 if text:
-                    f.write(f"\nParagraph: {text}\n")
+                    if last_type not in [None, "heading"]:
+                        f.write("\n")
+                    f.write(text + "\n\n")
+                    last_type = "paragraph"
 
             # Tables
             elif element.name == "table":
-                f.write("\nTable:\n")
+                if last_type is not None:
+                    f.write("\n")
                 for row in element.find_all("tr"):
                     cells = [cell.get_text(strip=True) for cell in row.find_all(["td", "th"])]
-                    f.write("\t".join(cells) + "\n")
+                    f.write(" | ".join(cells) + "\n")
+                f.write("\n")
+                last_type = "table"
 
             # Code blocks
             elif element.name in ["pre", "code"]:
                 code = element.get_text()
                 if code.strip():
-                    f.write("\nCode Block:\n")
-                    f.write(code + "\n")
+                    if last_type is not None:
+                        f.write("\n")
+                    f.write(code.strip() + "\n\n")
+                    last_type = "code"
 
-            # Links
+            # Links (write only the text and URL, not as a separate line if inside a paragraph)
             elif element.name == "a" and element.has_attr("href"):
-                link_text = element.get_text(strip=True)
-                href = element["href"]
-                f.write(f"\nLink: {link_text} ({href})\n")
+                # Only output standalone links (not those inside paragraphs)
+                parent_names = [parent.name for parent in element.parents]
+                if "p" not in parent_names:
+                    link_text = element.get_text(strip=True)
+                    href = element["href"]
+                    if link_text or href:
+                        if last_type is not None:
+                            f.write("\n")
+                        f.write(f"{link_text} ({href})\n\n")
+                        last_type = "link"
 
             # Macros (like tabs)
             elif element.name == "ac:structured-macro":
                 macro_text = element.get_text(strip=True)
                 if macro_text:
-                    f.write(f"\nMacro Content: {macro_text}\n")
+                    if last_type is not None:
+                        f.write("\n")
+                    f.write(macro_text + "\n\n")
+                    last_type = "macro"
 
     print(f"Extraction complete. Content saved to {output_file}")
