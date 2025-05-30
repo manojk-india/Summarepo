@@ -1,0 +1,46 @@
+from bs4 import BeautifulSoup
+
+def extract_and_save_confluence_content(html_content, output_file):
+    soup = BeautifulSoup(html_content, "html.parser")
+    with open(output_file, "w", encoding="utf-8") as f:
+        for element in soup.body.descendants if soup.body else soup.descendants:
+            if not hasattr(element, "name"):
+                continue
+
+            # Headings
+            if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                f.write(f"\n{element.name.upper()}: {element.get_text(strip=True)}\n")
+
+            # Paragraphs
+            elif element.name == "p":
+                text = element.get_text(strip=True)
+                if text:
+                    f.write(f"\nParagraph: {text}\n")
+
+            # Tables
+            elif element.name == "table":
+                f.write("\nTable:\n")
+                for row in element.find_all("tr"):
+                    cells = [cell.get_text(strip=True) for cell in row.find_all(["td", "th"])]
+                    f.write("\t".join(cells) + "\n")
+
+            # Code blocks
+            elif element.name in ["pre", "code"]:
+                code = element.get_text()
+                if code.strip():
+                    f.write("\nCode Block:\n")
+                    f.write(code + "\n")
+
+            # Links
+            elif element.name == "a" and element.has_attr("href"):
+                link_text = element.get_text(strip=True)
+                href = element["href"]
+                f.write(f"\nLink: {link_text} ({href})\n")
+
+            # Macros (like tabs)
+            elif element.name == "ac:structured-macro":
+                macro_text = element.get_text(strip=True)
+                if macro_text:
+                    f.write(f"\nMacro Content: {macro_text}\n")
+
+    print(f"Extraction complete. Content saved to {output_file}")
