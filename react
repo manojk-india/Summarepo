@@ -1,0 +1,38 @@
+import React from 'react';
+
+const ChatComponent = ({ chatHistory }) => {
+  return (
+    <div className="flex flex-col gap-4">
+      {chatHistory.map((msg, index) => (
+        <div key={index} className="bg-gray-100 p-4 rounded-lg shadow-md">
+          <p className={msg.role === 'system' ? 'text-blue-700' : 'text-gray-800'}>
+            {msg.content}
+          </p>
+
+          {msg.role === 'system' && msg.sources && msg.sources.length > 0 && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {msg.sources.map((source, i) => (
+                <a
+                  key={i}
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative group"
+                >
+                  <div className="w-6 h-6 text-xs flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-600 cursor-pointer">
+                    {i + 1}
+                  </div>
+                  <span className="absolute z-10 hidden group-hover:block bg-black text-white text-xs p-1 rounded-md top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
+                    {source}
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default ChatComponent;
